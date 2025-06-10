@@ -1,6 +1,7 @@
 "use server"
 
 import { getSupabaseServerClient } from "@/lib/supabase"
+import { headers } from "next/headers"
 import type {
   ContactoData,
   CotizacionData,
@@ -8,11 +9,51 @@ import type {
   FeedbackClienteData,
   SolicitudConvenioData,
   WhatsAppContactoData,
+  ExperienciaUsuarioData,
 } from "@/lib/supabase"
 
 // Función para generar session_id único
 function generateSessionId(): string {
   return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+// Función para obtener información del cliente
+async function getClientInfo() {
+  const headersList = await headers()
+  const userAgent = headersList.get("user-agent") || ""
+  const forwarded = headersList.get("x-forwarded-for")
+  const realIp = headersList.get("x-real-ip")
+
+  // Extraer información del User Agent
+  const getDeviceType = (ua: string) => {
+    if (/tablet|ipad/i.test(ua)) return "tablet"
+    if (/mobile|phone|android|iphone/i.test(ua)) return "mobile"
+    return "desktop"
+  }
+
+  const getBrowser = (ua: string) => {
+    if (ua.includes("Chrome")) return "Chrome"
+    if (ua.includes("Firefox")) return "Firefox"
+    if (ua.includes("Safari")) return "Safari"
+    if (ua.includes("Edge")) return "Edge"
+    return "Unknown"
+  }
+
+  const getOS = (ua: string) => {
+    if (ua.includes("Windows")) return "Windows"
+    if (ua.includes("Mac")) return "macOS"
+    if (ua.includes("Linux")) return "Linux"
+    if (ua.includes("Android")) return "Android"
+    if (ua.includes("iOS")) return "iOS"
+    return "Unknown"
+  }
+
+  return {
+    dispositivo: getDeviceType(userAgent),
+    navegador: getBrowser(userAgent),
+    sistema_operativo: getOS(userAgent),
+    ip_address: forwarded?.split(",")[0] || realIp || "unknown",
+  }
 }
 
 export async function submitContactForm(formData: FormData) {
@@ -232,6 +273,60 @@ export async function submitFeedback(formData: FormData) {
   } catch (error) {
     console.error("Error al guardar feedback:", error)
     return { success: false, message: "Error al enviar el feedback" }
+  }
+}
+
+// Nueva función para guardar experiencia de usuario
+export async function submitExperienciaUsuario(formData: FormData) {
+  try {
+    console.log("🔄 Iniciando registro de experiencia de usuario...")
+
+    const supabase = getSupabaseServerClient()
+    const clientInfo = await getClientInfo()
+
+    const experienciaData: ExperienciaUsuarioData = {
+      pagina: formData.get("pagina") as string,
+      accion: formData.get("accion") as string,
+      calificacion: Number.parseInt(formData.get("calificacion") as string),
+      comentario: (formData.get("comentario") as string) || undefined,
+      tiempo_en_pagina: Number.parseInt(formData.get("tiempo_en_pagina") as string) || 0,
+      dispositivo: clientInfo.dispositivo,
+      navegador: clientInfo.navegador,
+      sistema_operativo: clientInfo.sistema_operativo,
+      ip_address: clientInfo.ip_address,
+      session_id: (formData.get("session_id") as string) || generateSessionId(),
+    }
+
+    console.log("📝 Datos de experiencia de usuario:", experienciaData)
+
+    // Validar datos requeridos
+    if (!experienciaData.pagina || !experienciaData.accion || !experienciaData.calificacion) {
+      return {
+        success: false,
+        message: "Datos incompletos para registrar la experiencia.",
+      }
+    }
+
+    const { data: result, error } = await supabase.from("experiencia_usuario").insert(experienciaData).select().single()
+
+    if (error) {
+      console.error("❌ Error al guardar experiencia de usuario:", error)
+      throw error
+    }
+
+    console.log("✅ Experiencia de usuario guardada exitosamente:", result?.id)
+
+    return {
+      success: true,
+      message: "Experiencia registrada exitosamente",
+      data: result,
+    }
+  } catch (error) {
+    console.error("❌ Error al registrar experiencia de usuario:", error)
+    return {
+      success: false,
+      message: "Error al registrar la experiencia",
+    }
   }
 }
 

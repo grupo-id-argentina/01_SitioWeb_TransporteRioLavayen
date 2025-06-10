@@ -67,6 +67,20 @@ export interface WhatsAppContactoData {
   metadata?: any
 }
 
+// Nuevo tipo para experiencia_usuario
+export interface ExperienciaUsuarioData {
+  pagina: string
+  accion: string
+  calificacion: number
+  comentario?: string
+  tiempo_en_pagina: number
+  dispositivo: string
+  navegador: string
+  sistema_operativo: string
+  ip_address?: string
+  session_id: string
+}
+
 // Singleton para el cliente de Supabase
 let supabaseInstance: ReturnType<typeof createClient> | null = null
 
