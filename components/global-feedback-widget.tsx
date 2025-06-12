@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Star, X, Send, ThumbsUp } from "lucide-react"
-import { submitExperienciaUsuario } from "@/app/actions/contact-actions"
+import { submitFeedback } from "@/app/actions/contact-actions"
 import { trackEvent } from "@/lib/mixpanel-config"
 
 interface GlobalFeedbackWidgetProps {
@@ -16,13 +16,13 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
   const [showForm, setShowForm] = useState(false)
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
-  const [comentario, setComentario] = useState("")
+  const [feedback, setFeedback] = useState("")
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState("")
   const [timeoutTriggered, setTimeoutTriggered] = useState(false)
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
-  const [startTime] = useState(() => Date.now())
 
   // Timer para mostrar el widget después de 59 segundos de inactividad
   useEffect(() => {
@@ -39,11 +39,10 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
           setTimeoutTriggered(true)
 
           // Track timeout trigger
-          trackEvent("Widget Experiencia Mostrado por Timeout", {
+          trackEvent("Feedback Widget Timeout Triggered", {
             pagina_origen: paginaOrigen,
             tiempo_inactividad: 59,
             url_actual: window.location.href,
-            session_id: sessionId,
           })
         }
       }, 59000) // 59 segundos
@@ -68,7 +67,7 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
         document.removeEventListener(event, handleActivity, true)
       })
     }
-  }, [timeoutTriggered, showWidget, submitted, paginaOrigen, sessionId])
+  }, [timeoutTriggered, showWidget, submitted, paginaOrigen])
 
   // Mostrar widget al final de flujos importantes
   useEffect(() => {
@@ -77,11 +76,10 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
         setShowWidget(true)
 
         // Track manual trigger
-        trackEvent("Widget Experiencia Mostrado Manualmente", {
+        trackEvent("Feedback Widget Manual Triggered", {
           pagina_origen: paginaOrigen,
           trigger_type: event.detail?.trigger || "manual",
           url_actual: window.location.href,
-          session_id: sessionId,
         })
       }
     }
@@ -91,11 +89,7 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
     return () => {
       window.removeEventListener("showFeedbackWidget" as any, handleShowFeedback)
     }
-  }, [submitted, showWidget, paginaOrigen, sessionId])
-
-  const calcularTiempoEnPagina = () => {
-    return Math.floor((Date.now() - startTime) / 1000) // en segundos
-  }
+  }, [submitted, showWidget, paginaOrigen])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -110,82 +104,39 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
 
     try {
       const formData = new FormData()
-      formData.append("pagina", paginaOrigen)
-      formData.append("accion", timeoutTriggered ? "feedback_timeout" : "feedback_manual")
-      formData.append("calificacion", rating.toString())
-      formData.append("comentario", comentario)
-      formData.append("tiempo_en_pagina", calcularTiempoEnPagina().toString())
-      formData.append("session_id", sessionId)
+      formData.append("rating", rating.toString())
+      formData.append("feedback", feedback)
+      formData.append("name", name)
+      formData.append("email", email)
+      formData.append("pagina_origen", paginaOrigen)
 
-      const result = await submitExperienciaUsuario(formData)
+      const result = await submitFeedback(formData)
 
       if (result.success) {
         setSubmitted(true)
 
-        // Track successful submission
-        trackEvent("Experiencia Usuario Enviada", {
-          calificacion: rating,
-          pagina: paginaOrigen,
-          accion: timeoutTriggered ? "feedback_timeout" : "feedback_manual",
-          tiene_comentario: comentario.length > 0,
-          tiempo_en_pagina: calcularTiempoEnPagina(),
+        // Track successful feedback submission
+        trackEvent("Global Feedback Submitted", {
+          rating: rating,
+          pagina_origen: paginaOrigen,
+          has_comment: feedback.length > 0,
+          has_name: name.length > 0,
+          has_email: email.length > 0,
           trigger_type: timeoutTriggered ? "timeout" : "manual",
-          session_id: sessionId,
           url_actual: window.location.href,
         })
 
         setTimeout(() => {
           setShowWidget(false)
-        }, 4000)
+        }, 3000)
       } else {
-        setError(result.message || "Error al enviar la experiencia")
+        setError(result.message || "Error al enviar el feedback")
       }
     } catch (err) {
       setError("Ha ocurrido un error. Por favor, inténtalo más tarde.")
-      console.error("Error al enviar experiencia:", err)
+      console.error("Error al enviar feedback:", err)
     } finally {
       setIsSubmitting(false)
-    }
-  }
-
-  const handleQuickRating = async (star: number) => {
-    setRating(star)
-
-    if (star >= 4) {
-      // Para calificaciones altas, enviar directamente
-      const formData = new FormData()
-      formData.append("pagina", paginaOrigen)
-      formData.append("accion", timeoutTriggered ? "feedback_rapido_timeout" : "feedback_rapido_manual")
-      formData.append("calificacion", star.toString())
-      formData.append("comentario", "Calificación rápida - experiencia positiva")
-      formData.append("tiempo_en_pagina", calcularTiempoEnPagina().toString())
-      formData.append("session_id", sessionId)
-
-      try {
-        const result = await submitExperienciaUsuario(formData)
-        if (result.success) {
-          setSubmitted(true)
-
-          trackEvent("Experiencia Usuario Rapida", {
-            calificacion: star,
-            pagina: paginaOrigen,
-            accion: timeoutTriggered ? "feedback_rapido_timeout" : "feedback_rapido_manual",
-            tiempo_en_pagina: calcularTiempoEnPagina(),
-            trigger_type: timeoutTriggered ? "timeout" : "manual",
-            session_id: sessionId,
-          })
-
-          setTimeout(() => {
-            setShowWidget(false)
-          }, 3000)
-        }
-      } catch (error) {
-        console.error("Error al enviar calificación rápida:", error)
-        setShowForm(true) // Fallback al formulario completo
-      }
-    } else {
-      // Para calificaciones bajas, mostrar formulario completo
-      setShowForm(true)
     }
   }
 
@@ -193,13 +144,12 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
     setShowWidget(false)
 
     // Track widget close
-    trackEvent("Widget Experiencia Cerrado", {
-      pagina: paginaOrigen,
-      enviado: submitted,
-      calificacion_dada: rating > 0,
+    trackEvent("Feedback Widget Closed", {
+      pagina_origen: paginaOrigen,
+      submitted: submitted,
+      rating_given: rating > 0,
       trigger_type: timeoutTriggered ? "timeout" : "manual",
-      tiempo_en_pagina: calcularTiempoEnPagina(),
-      session_id: sessionId,
+      url_actual: window.location.href,
     })
   }
 
@@ -231,27 +181,11 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
           </div>
 
           {submitted ? (
-            <div className="text-center py-4 animate-fade-in">
-              <div className="bg-green-100 dark:bg-green-900/30 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                <svg
-                  className="w-6 h-6 text-green-600 dark:text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+            <div className="text-center py-2">
+              <div className="text-green-600 dark:text-green-400 text-sm font-medium mb-1">
+                ¡Gracias por tu feedback!
               </div>
-              <div className="text-green-600 dark:text-green-400 text-sm font-semibold mb-1">¡Experiencia enviada!</div>
-              <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
-                Gracias por ayudarnos a mejorar nuestro servicio
-              </p>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
-                <div
-                  className="bg-green-500 h-1 rounded-full animate-progress"
-                  style={{ width: "100%", animation: "progress 3s linear forwards" }}
-                ></div>
-              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-300">Tu opinión nos ayuda a mejorar</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -265,7 +199,28 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
                     }`}
                     onMouseEnter={() => setHoveredRating(star)}
                     onMouseLeave={() => setHoveredRating(0)}
-                    onClick={() => handleQuickRating(star)}
+                    onClick={() => {
+                      setRating(star)
+                      if (star >= 4) {
+                        // Para calificaciones altas, enviar directamente
+                        const formData = new FormData()
+                        formData.append("rating", star.toString())
+                        formData.append("feedback", "Calificación rápida")
+                        formData.append("pagina_origen", paginaOrigen)
+
+                        submitFeedback(formData).then(() => {
+                          setSubmitted(true)
+                          trackEvent("Quick Feedback Submitted", {
+                            rating: star,
+                            pagina_origen: paginaOrigen,
+                            trigger_type: timeoutTriggered ? "timeout" : "manual",
+                          })
+                        })
+                      } else {
+                        // Para calificaciones bajas, mostrar formulario completo
+                        setShowForm(true)
+                      }
+                    }}
                   >
                     <Star className="h-6 w-6 fill-current" />
                   </button>
@@ -305,9 +260,7 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Rating */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Calificación * ({rating}/5)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Calificación *</label>
               <div className="flex justify-center space-x-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -324,33 +277,51 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
                   </button>
                 ))}
               </div>
-              {rating > 0 && (
-                <p className="text-xs text-center text-gray-600 dark:text-gray-400 mt-1">
-                  {rating === 1 && "Muy mala experiencia"}
-                  {rating === 2 && "Mala experiencia"}
-                  {rating === 3 && "Experiencia regular"}
-                  {rating === 4 && "Buena experiencia"}
-                  {rating === 5 && "Excelente experiencia"}
-                </p>
-              )}
             </div>
 
             {/* Comentario */}
             <div>
-              <label htmlFor="comentario" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Comentario {rating <= 3 ? "*" : "(opcional)"}
+              <label htmlFor="feedback" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Comentario (opcional)
               </label>
               <textarea
-                id="comentario"
-                value={comentario}
-                onChange={(e) => setComentario(e.target.value)}
+                id="feedback"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
                 rows={3}
-                required={rating <= 3}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-secondary-700 dark:text-white text-sm"
-                placeholder={
-                  rating <= 3 ? "Por favor, cuéntanos qué podemos mejorar..." : "¿Qué te gustó más? ¿Alguna sugerencia?"
-                }
+                placeholder="¿Qué te pareció? ¿Cómo podemos mejorar?"
               />
+            </div>
+
+            {/* Nombre y Email en una fila */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-secondary-700 dark:text-white text-sm"
+                  placeholder="Tu nombre"
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-secondary-700 dark:text-white text-sm"
+                  placeholder="tu@email.com"
+                />
+              </div>
             </div>
 
             {error && (
@@ -368,7 +339,7 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || rating === 0 || (rating <= 3 && !comentario.trim())}
+                disabled={isSubmitting || rating === 0}
                 className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 {isSubmitting ? (
@@ -376,69 +347,16 @@ export function GlobalFeedbackWidget({ paginaOrigen = "general" }: GlobalFeedbac
                 ) : (
                   <>
                     <Send className="mr-1 h-3 w-3" />
-                    <span>Enviar Experiencia</span>
+                    <span>Enviar</span>
                   </>
                 )}
               </button>
             </div>
           </form>
-          {submitted && (
-            <div className="text-center py-4 animate-fade-in">
-              <div className="bg-green-100 dark:bg-green-900/30 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                <svg
-                  className="w-6 h-6 text-green-600 dark:text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div className="text-green-600 dark:text-green-400 text-sm font-semibold mb-1">¡Experiencia enviada!</div>
-              <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
-                Gracias por ayudarnos a mejorar nuestro servicio
-              </p>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
-                <div
-                  className="bg-green-500 h-1 rounded-full animate-progress"
-                  style={{ width: "100%", animation: "progress 3s linear forwards" }}
-                ></div>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
   )
-}
-
-// Agregar estilos para las animaciones
-const styles = `
-  @keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  
-  @keyframes progress {
-    from { width: 0%; }
-    to { width: 100%; }
-  }
-  
-  .animate-fade-in {
-    animation: fade-in 0.5s ease-out;
-  }
-  
-  .animate-progress {
-    animation: progress 3s linear forwards;
-  }
-`
-
-// Inyectar estilos si no existen
-if (typeof document !== "undefined" && !document.getElementById("feedback-widget-styles")) {
-  const styleSheet = document.createElement("style")
-  styleSheet.id = "feedback-widget-styles"
-  styleSheet.textContent = styles
-  document.head.appendChild(styleSheet)
 }
 
 // Hook para disparar el widget manualmente
