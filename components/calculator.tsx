@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Truck, CalculatorIcon as CalcIcon, Send, SmilePlus, Meh, Frown, User, Building, Check } from "lucide-react"
 import { trackEvent } from "@/lib/mixpanel-config"
 import { saveCotizacion, registrarFeedbackCalculadora, saveWhatsAppContact } from "@/app/actions/contact-actions"
@@ -164,6 +164,12 @@ export function Calculator() {
   const [feedbackSeleccionado, setFeedbackSeleccionado] = useState<FeedbackType>(null)
   const [contadorRedireccion, setContadorRedireccion] = useState(3)
   const [redireccionando, setRedireccionando] = useState(false)
+  const [comentarioFeedback, setComentarioFeedback] = useState("")
+  const [emailFeedback, setEmailFeedback] = useState("")
+  const [mostrarFormularioFeedback, setMostrarFormularioFeedback] = useState(false)
+  const [errorFeedback, setErrorFeedback] = useState("")
+  const [cargandoFeedback, setCargandoFeedback] = useState(false)
+  const [cargandoWhatsApp, setCargandoWhatsApp] = useState(false)
 
   // Inicializar tracking después de que el componente esté montado
   useEffect(() => {
@@ -304,7 +310,7 @@ export function Calculator() {
   }
 
   // Función para generar una cotización real
-  const generarCotizacion = async () => {
+  const generarCotizacion = useCallback(async () => {
     // Validar cantidad según el tipo de carga
     if (tipoCargaSeleccionado) {
       const rango = obtenerRangoPeso(tipoCargaSeleccionado)
@@ -463,10 +469,22 @@ export function Calculator() {
         })
       }
     }
-  }
+  }, [
+    depositoSeleccionado,
+    zonaSeleccionada,
+    localidadSeleccionada,
+    tipoCargaSeleccionado,
+    cantidad,
+    incluirIVA,
+    deseaSeguro,
+    valorMercaderia,
+    isTrackingReady,
+    depositos,
+    localidadesPorZona,
+  ])
 
   // Función para resetear el formulario
-  const resetearFormulario = () => {
+  const resetearFormulario = useCallback(() => {
     setDepositoSeleccionado("")
     setZonaSeleccionada("")
     setLocalidadSeleccionada("")
@@ -486,10 +504,10 @@ export function Calculator() {
     if (isTrackingReady) {
       trackEvent("Calculator Form Reset", {})
     }
-  }
+  }, [isTrackingReady])
 
   // Función para obtener el rango de peso según el tipo de carga
-  const obtenerRangoPeso = (tipoCarga: string) => {
+  const obtenerRangoPeso = useCallback((tipoCarga: string) => {
     const rangos: Record<string, { min: number; max: number | null }> = {
       "BULTO MINIMO (MAXIMO 20 KG)": { min: 1, max: 20 },
       "DE 21 KG A 100 KG": { min: 21, max: 100 },
@@ -506,7 +524,7 @@ export function Calculator() {
     }
 
     return rangos[tipoCarga] || { min: 1, max: null }
-  }
+  }, [])
 
   // Función para validar la cantidad al cambiar
   const validarCantidad = (value: string) => {
@@ -524,7 +542,7 @@ export function Calculator() {
   }
 
   // Función para iniciar el flujo de WhatsApp
-  const iniciarEnvioWhatsApp = () => {
+  const iniciarEnvioWhatsApp = useCallback(() => {
     setMostrarModalWhatsApp(true)
     setPasoActual(1)
     setDestinatarioSeleccionado(null)
@@ -534,6 +552,10 @@ export function Calculator() {
     setFeedbackSeleccionado(null)
     setRedireccionando(false)
     setContadorRedireccion(5)
+    setComentarioFeedback("")
+    setEmailFeedback("")
+    setErrorFeedback("")
+    setMostrarFormularioFeedback(false)
 
     // Track WhatsApp flow start
     if (isTrackingReady) {
@@ -545,7 +567,7 @@ export function Calculator() {
         localidad: localidadSeleccionada,
       })
     }
-  }
+  }, [cotizacionId, costoFinal, depositoSeleccionado, zonaSeleccionada, localidadSeleccionada, isTrackingReady])
 
   // Función para seleccionar destinatario
   const seleccionarDestinatario = (tipo: "administracion" | "otro") => {
@@ -592,7 +614,7 @@ export function Calculator() {
   }
 
   // Función para enviar a administración
-  const enviarPorWhatsAppAdministracion = () => {
+  const enviarPorWhatsAppAdministracion = useCallback(() => {
     const numeroAdministracion = "+5493888446213"
 
     const mensaje = encodeURIComponent(
@@ -630,10 +652,23 @@ ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleStri
     }
 
     window.open(`https://wa.me/${numeroAdministracion.replace(/\D/g, "")}?text=${mensaje}`, "_blank")
-  }
+  }, [
+    cotizacionId,
+    tipoCargaSeleccionado,
+    depositoSeleccionado,
+    localidadSeleccionada,
+    zonaSeleccionada,
+    distancia,
+    cantidad,
+    costoFinal,
+    incluirIVA,
+    deseaSeguro,
+    valorMercaderia,
+    isTrackingReady,
+  ])
 
   // Función para enviar a otro contacto
-  const enviarPorWhatsAppOtroContacto = () => {
+  const enviarPorWhatsAppOtroContacto = useCallback(() => {
     // Validar datos
     if (!nombreUsuario.trim()) {
       setErrorModal("Por favor ingrese su nombre completo")
@@ -650,21 +685,22 @@ ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleStri
       return
     }
 
-    if (!whatsappUsuario.trim() || whatsappUsuario.length < 10) {
-      setErrorModal("Por favor ingrese un número de WhatsApp válido")
-
+    if (!whatsappUsuario.trim() || whatsappUsuario.length !== 10) {
+      setErrorModal("Por favor ingrese un número de WhatsApp válido de 10 dígitos")
       // Track validation error
       if (isTrackingReady) {
         trackEvent("WhatsApp Form Validation Error", {
           cotizacion_id: cotizacionId,
           error_field: "whatsapp",
-          error_message: "WhatsApp inválido",
+          error_message: "WhatsApp inválido - debe tener 10 dígitos",
           whatsapp_length: whatsappUsuario.length,
           paso: 2,
         })
       }
       return
     }
+
+    setCargandoWhatsApp(true)
 
     // Guardar contacto de WhatsApp en Supabase
     try {
@@ -684,12 +720,42 @@ ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleStri
           distancia: distancia,
         },
       })
-    } catch (error) {
-      console.warn("Error al guardar contacto WhatsApp:", error)
-    }
+        .then(() => {
+          // Track WhatsApp message sent to other contact
+          if (isTrackingReady) {
+            trackEvent("WhatsApp Message Sent", {
+              cotizacion_id: cotizacionId,
+              recipient_type: "otro",
+              whatsapp_number: `+549${whatsappUsuario}`,
+              costo_final: costoFinal,
+              deposito: depositoSeleccionado,
+              zona: zonaSeleccionada,
+              localidad: localidadSeleccionada,
+              tipo_carga: tipoCargaSeleccionado,
+              cantidad: cantidad,
+              incluir_iva: incluirIVA,
+              desea_seguro: deseaSeguro,
+              valor_mercaderia: valorMercaderia,
+              distancia: distancia,
+              usuario_nombre: nombreUsuario,
+              usuario_whatsapp: `+549${whatsappUsuario}`,
+            })
+          }
 
-    const mensaje = encodeURIComponent(
-      `Hola ${nombreUsuario}! Aquí está la cotización ${cotizacionId} que solicitaste:
+          // Track step progression to feedback
+          if (isTrackingReady) {
+            trackEvent("WhatsApp Flow Step Changed", {
+              cotizacion_id: cotizacionId,
+              from_step: 2,
+              to_step: 3,
+              recipient_type: "otro",
+              usuario_nombre: nombreUsuario,
+              usuario_whatsapp: `+549${whatsappUsuario}`,
+            })
+          }
+
+          const mensaje = encodeURIComponent(
+            `Hola ${nombreUsuario}! Aquí está la cotización ${cotizacionId} que solicitaste:
 
 📦 Tipo de carga: ${tipoCargaSeleccionado}
 📍 Origen: ${depositoSeleccionado}
@@ -701,100 +767,130 @@ ${incluirIVA ? "✅ IVA incluido" : "❌ Sin IVA"}
 ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleString()})` : "❌ Sin seguro"}
 
 Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
-    )
+          )
 
-    // Track WhatsApp message sent to other contact
-    if (isTrackingReady) {
-      trackEvent("WhatsApp Message Sent", {
-        cotizacion_id: cotizacionId,
-        recipient_type: "otro",
-        whatsapp_number: `+549${whatsappUsuario}`,
-        costo_final: costoFinal,
-        deposito: depositoSeleccionado,
-        zona: zonaSeleccionada,
-        localidad: localidadSeleccionada,
-        tipo_carga: tipoCargaSeleccionado,
-        cantidad: cantidad,
-        incluir_iva: incluirIVA,
-        desea_seguro: deseaSeguro,
-        valor_mercaderia: valorMercaderia,
-        distancia: distancia,
-        usuario_nombre: nombreUsuario,
-        usuario_whatsapp: `+549${whatsappUsuario}`,
-      })
+          // Avanzar al paso 3
+          setPasoActual(3)
+          setCargandoWhatsApp(false)
+
+          // Abrir WhatsApp
+          window.open(`https://wa.me/549${whatsappUsuario.replace(/\D/g, "")}?text=${mensaje}`, "_blank")
+        })
+        .catch((error) => {
+          console.warn("Error al guardar contacto WhatsApp:", error)
+          setErrorModal("Hubo un problema al procesar tu solicitud. Por favor intenta nuevamente.")
+          setCargandoWhatsApp(false)
+        })
+    } catch (error) {
+      console.warn("Error al guardar contacto WhatsApp:", error)
+      setErrorModal("Hubo un problema al procesar tu solicitud. Por favor intenta nuevamente.")
+      setCargandoWhatsApp(false)
     }
-
-    // Track step progression to feedback
-    if (isTrackingReady) {
-      trackEvent("WhatsApp Flow Step Changed", {
-        cotizacion_id: cotizacionId,
-        from_step: 2,
-        to_step: 3,
-        recipient_type: "otro",
-        usuario_nombre: nombreUsuario,
-        usuario_whatsapp: `+549${whatsappUsuario}`,
-      })
-    }
-
-    // Avanzar al paso 3
-    setPasoActual(3)
-
-    // Abrir WhatsApp
-    window.open(`https://wa.me/549${whatsappUsuario.replace(/\D/g, "")}?text=${mensaje}`, "_blank")
-  }
+  }, [
+    nombreUsuario,
+    whatsappUsuario,
+    cotizacionId,
+    depositoSeleccionado,
+    localidadSeleccionada,
+    zonaSeleccionada,
+    costoFinal,
+    tipoCargaSeleccionado,
+    cantidad,
+    incluirIVA,
+    deseaSeguro,
+    valorMercaderia,
+    distancia,
+    isTrackingReady,
+  ])
 
   // Función para seleccionar feedback
-  const seleccionarFeedback = async (tipo: FeedbackType) => {
-    setFeedbackSeleccionado(tipo)
+  const seleccionarFeedback = useCallback(
+    (tipo: FeedbackType) => {
+      setFeedbackSeleccionado(tipo)
+      setMostrarFormularioFeedback(true)
 
-    // Track feedback selection
+      // Track feedback selection
+      if (isTrackingReady) {
+        trackEvent("WhatsApp Flow Feedback Selected", {
+          cotizacion_id: cotizacionId,
+          feedback_type: tipo,
+          recipient_type: destinatarioSeleccionado,
+          costo_final: costoFinal,
+          deposito: depositoSeleccionado,
+          zona: zonaSeleccionada,
+          localidad: localidadSeleccionada,
+          paso: 3,
+        })
+      }
+    },
+    [
+      cotizacionId,
+      destinatarioSeleccionado,
+      costoFinal,
+      depositoSeleccionado,
+      zonaSeleccionada,
+      localidadSeleccionada,
+      isTrackingReady,
+    ],
+  )
+
+  // Función para enviar el feedback completo
+  const enviarFeedbackCompleto = useCallback(async () => {
+    // Validar campos
+    if (!comentarioFeedback.trim()) {
+      setErrorFeedback("Por favor ingrese un comentario")
+      return
+    }
+
+    if (!emailFeedback.trim() || !emailFeedback.includes("@")) {
+      setErrorFeedback("Por favor ingrese un email válido")
+      return
+    }
+
+    setErrorFeedback("")
+    setCargandoFeedback(true)
+
+    // Track feedback submission
     if (isTrackingReady) {
-      trackEvent("WhatsApp Flow Feedback Selected", {
+      trackEvent("WhatsApp Flow Feedback Submitted", {
         cotizacion_id: cotizacionId,
-        feedback_type: tipo,
+        feedback_type: feedbackSeleccionado,
+        comentario: comentarioFeedback,
+        email: emailFeedback,
         recipient_type: destinatarioSeleccionado,
-        costo_final: costoFinal,
-        deposito: depositoSeleccionado,
-        zona: zonaSeleccionada,
-        localidad: localidadSeleccionada,
-        paso: 3,
       })
 
       // Track redirection start
       trackEvent("WhatsApp Flow Redirect Started", {
         cotizacion_id: cotizacionId,
-        feedback_selected: tipo,
-        countdown_seconds: 5,
+        feedback_selected: feedbackSeleccionado,
+        countdown_seconds: 3,
       })
     }
 
-    // Registrar feedback en Supabase
-    if (tipo) {
+    // Registrar feedback en Supabase con comentario y email
+    if (feedbackSeleccionado) {
       try {
         await registrarFeedbackCalculadora({
-          tipo: tipo,
+          tipo: feedbackSeleccionado,
           cotizacion_id: cotizacionId,
           pagina_origen: "calculadora",
+          comentario: comentarioFeedback,
+          email: emailFeedback,
         })
+
+        // Mostrar mensaje de éxito
+        setMostrarFormularioFeedback(false)
+        // Iniciar redirección sin mostrar el widget global
+        setRedireccionando(true)
       } catch (error) {
         console.warn("Error al registrar feedback:", error)
+        setErrorFeedback("Hubo un problema al enviar tu feedback. Por favor intenta nuevamente.")
+      } finally {
+        setCargandoFeedback(false)
       }
     }
-
-    // Después de registrar feedback en Supabase, disparar el widget global
-    if (tipo) {
-      // Disparar widget de feedback global después de completar el flujo
-      setTimeout(() => {
-        const event = new CustomEvent("showFeedbackWidget", {
-          detail: { trigger: "whatsapp_flow_completed" },
-        })
-        window.dispatchEvent(event)
-      }, 2000)
-    }
-
-    // Iniciar redirección
-    setRedireccionando(true)
-  }
+  }, [feedbackSeleccionado, comentarioFeedback, emailFeedback, cotizacionId, destinatarioSeleccionado, isTrackingReady])
 
   // Función para cerrar modal
   const cerrarModal = () => {
@@ -830,6 +926,36 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
 
   return (
     <div className="max-w-5xl mx-auto">
+      <div className="bg-gray-50 dark:bg-secondary-700 rounded-lg p-6 border border-gray-200 dark:border-secondary-600 animate-fade-in transition-colors duration-300 mb-6">
+        <h3 className="text-lg font-semibold mb-3 dark:text-white">Estas son las ubicaciones que abarca cada zona</h3>
+        <ul className="space-y-2 text-gray-600 dark:text-gray-300">
+          <li className="flex items-start">
+            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
+            ZONA 1 &#10145; LA ESPERANZA, EL PIQUETE, CHALICAN, PUESTO VIEJO, EL BORDO, METAN, YALA, REYES, CAMPO SANTO,
+            FRAILE PINTADO, GRAL GUEMES, LIBERTADOR GENERAL SAN MARTIN, LOS LAPACHOS, ROSARIO DE LA FRONTERA, ROSARIO DE
+            LERMA, SALTA, LOZANO, JUJUY, PERICO, PALPALA, EL CARMEN, MONTERRICO, SAN PEDRO, SAN ANTONIO
+          </li>
+          <li className="flex items-start">
+            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
+            ZONA 2 &#10145; COLONIA SANTA ROSA, EMBARCACION, HUMAHUACA, ORAN, TILCARA, HUACALERA, MAIMARA, SANTA CLARA,
+            CERRILLOS, EL CARRIL, YUTO, PICHANAL, URUNDEL, TUMBAYA, VOLCAN, UQUIA, PURMAMARCA, TABACAL, YRIGOYEN,
+            VAQUEROS, CAMPO QUIJANO
+          </li>
+          <li className="flex items-start">
+            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
+            ZONA 3 &#10145; ABRA PAMPA, AGUAS BLANCAS, TRES CRUCES, METAN, EL GALPON, GENERAL MOSCONI, TARTAGAL
+          </li>
+          <li className="flex items-start">
+            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
+            ZONA 4 &#10145; LA QUIACA, POCITOS, SALVADOR MAZZA, PALMA SOLA, J V GONZALEZ, CAFAYATE
+          </li>
+          <li className="flex items-start">
+            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
+            ZONA 5 &#128245; ¡AÚN NO DISPONIBLE! &#128245;
+          </li>
+        </ul>
+      </div>
+
       {!cotizacionGenerada ? (
         <div className="bg-white dark:bg-secondary-800 rounded-lg shadow-md overflow-hidden animate-fade-in">
           <div className="bg-gradient-to-r from-primary-500 to-accent-400 py-6 px-6 text-white">
@@ -1358,7 +1484,7 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
                       />
                     </div>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      Ingrese característica + número (ej: 11 1234 5678)
+                      Ingrese 10 dígitos sin el 0 ni el 15 (ej: 1123456789)
                     </p>
                   </div>
                 </div>
@@ -1372,10 +1498,17 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
                   </button>
                   <button
                     onClick={enviarPorWhatsAppOtroContacto}
-                    disabled={!nombreUsuario.trim() || !whatsappUsuario.trim()}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+                    disabled={!nombreUsuario.trim() || !whatsappUsuario.trim() || cargandoWhatsApp}
+                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
                   >
-                    Enviar
+                    {cargandoWhatsApp ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      "Enviar"
+                    )}
                   </button>
                 </div>
               </div>
@@ -1418,6 +1551,73 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
                       </button>
                     </div>
                   </>
+                ) : mostrarFormularioFeedback ? (
+                  <div className="text-left">
+                    <div className="flex justify-center mb-4">
+                      {feedbackSeleccionado === "happy" && <SmilePlus className="h-12 w-12 text-green-600" />}
+                      {feedbackSeleccionado === "neutral" && <Meh className="h-12 w-12 text-yellow-600" />}
+                      {feedbackSeleccionado === "sad" && <Frown className="h-12 w-12 text-red-600" />}
+                    </div>
+
+                    {errorFeedback && (
+                      <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-3 py-2 rounded mb-4 text-sm">
+                        {errorFeedback}
+                      </div>
+                    )}
+
+                    <div className="mb-4">
+                      <label
+                        htmlFor="comentarioFeedback"
+                        className="block text-gray-700 dark:text-gray-300 mb-2 font-medium"
+                      >
+                        Comentario *
+                      </label>
+                      <textarea
+                        id="comentarioFeedback"
+                        value={comentarioFeedback}
+                        onChange={(e) => setComentarioFeedback(e.target.value)}
+                        placeholder="Cuéntanos más sobre tu experiencia..."
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-secondary-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-secondary-700 dark:text-white"
+                        rows={3}
+                        required
+                      />
+                    </div>
+
+                    <div className="mb-4">
+                      <label
+                        htmlFor="emailFeedback"
+                        className="block text-gray-700 dark:text-gray-300 mb-2 font-medium"
+                      >
+                        Email *
+                      </label>
+                      <input
+                        type="email"
+                        id="emailFeedback"
+                        value={emailFeedback}
+                        onChange={(e) => setEmailFeedback(e.target.value)}
+                        placeholder="tu@email.com"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-secondary-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-secondary-700 dark:text-white"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex justify-center mt-4">
+                      <button
+                        onClick={enviarFeedbackCompleto}
+                        disabled={cargandoFeedback}
+                        className="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-6 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      >
+                        {cargandoFeedback ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                            <span>Enviando...</span>
+                          </>
+                        ) : (
+                          "Enviar y continuar"
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <div className="mb-6">
@@ -1442,36 +1642,6 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
           </div>
         </div>
       )}
-
-      <div className="mt-8 bg-gray-50 dark:bg-secondary-700 rounded-lg p-6 border border-gray-200 dark:border-secondary-600 animate-fade-in transition-colors duration-300">
-        <h3 className="text-lg font-semibold mb-3 dark:text-white">Estas son las ubicaciones que abarca cada zona</h3>
-        <ul className="space-y-2 text-gray-600 dark:text-gray-300">
-          <li className="flex items-start">
-            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
-            ZONA 1 &#10145; LA ESPERANZA, EL PIQUETE, CHALICAN, PUESTO VIEJO, EL BORDO, METAN, YALA, REYES, CAMPO SANTO,
-            FRAILE PINTADO, GRAL GUEMES, LIBERTADOR GENERAL SAN MARTIN, LOS LAPACHOS, ROSARIO DE LA FRONTERA, ROSARIO DE
-            LERMA, SALTA, LOZANO, JUJUY, PERICO, PALPALA, EL CARMEN, MONTERRICO, SAN PEDRO, SAN ANTONIO
-          </li>
-          <li className="flex items-start">
-            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
-            ZONA 2 &#10145; COLONIA SANTA ROSA, EMBARCACION, HUMAHUACA, ORAN, TILCARA, HUACALERA, MAIMARA, SANTA CLARA,
-            CERRILLOS, EL CARRIL, YUTO, PICHANAL, URUNDEL, TUMBAYA, VOLCAN, UQUIA, PURMAMARCA, TABACAL, YRIGOYEN,
-            VAQUEROS, CAMPO QUIJANO
-          </li>
-          <li className="flex items-start">
-            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
-            ZONA 3 &#10145; ABRA PAMPA, AGUAS BLANCAS, TRES CRUCES, METAN, EL GALPON, GENERAL MOSCONI, TARTAGAL
-          </li>
-          <li className="flex items-start">
-            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
-            ZONA 4 &#10145; LA QUIACA, POCITOS, SALVADOR MAZZA, PALMA SOLA, J V GONZALEZ, CAFAYATE
-          </li>
-          <li className="flex items-start">
-            <span className="text-primary-600 dark:text-primary-400 mr-2">•</span>
-            ZONA 5 &#128245; ¡AÚN NO DISPONIBLE! &#128245;
-          </li>
-        </ul>
-      </div>
 
       <div className="mt-8 bg-gray-50 dark:bg-secondary-700 rounded-lg p-6 border border-gray-200 dark:border-secondary-600 animate-fade-in transition-colors duration-300">
         <h3 className="text-lg font-semibold mb-3 dark:text-white">Información Importante</h3>

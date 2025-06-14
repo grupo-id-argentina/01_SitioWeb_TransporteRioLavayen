@@ -33,7 +33,7 @@ export function Contact() {
     <section className="py-12 sm:py-16 bg-gray-50 dark:bg-secondary-900 transition-colors duration-300" id="contacto">
       <div className="container mx-auto px-4">
         <div className="text-center mb-8 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-4 dark:text-white">Contáctenos</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4 dark:text-white">Realiza tu consulta ¡Ahora mismo!</h2>
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto text-sm sm:text-base">
             Estamos listos para atender sus consultas y resolver cualquier duda sobre nuestros servicios de transporte y
             logística.
@@ -44,7 +44,7 @@ export function Contact() {
           <div className="w-full xl:w-1/2">
             <div className="bg-white dark:bg-secondary-800 rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 p-6 sm:p-8">
               <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 dark:text-white" id="contacto-form">
-                Formulario de Contacto
+                Formulario de Consulta
               </h3>
 
               {submitted ? (
@@ -95,13 +95,27 @@ export function Contact() {
                       >
                         Teléfono/WhatsApp *
                       </label>
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-secondary-700 dark:text-white transition-all duration-200 text-sm sm:text-base"
-                        required
-                      />
+                      <div className="flex">
+                        <div className="flex items-center px-3 py-2 sm:py-3 bg-gray-100 dark:bg-gray-600 border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg text-gray-700 dark:text-gray-300 font-medium text-sm sm:text-base">
+                          +549
+                        </div>
+                        <input
+                          type="tel"
+                          id="phone"
+                          name="phone"
+                          placeholder="1123456789"
+                          maxLength={10}
+                          className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-secondary-700 dark:text-white transition-all duration-200 text-sm sm:text-base"
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, "").slice(0, 10)
+                            e.target.value = value
+                          }}
+                          required
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Ingrese 10 dígitos sin el 0 ni el 15 (ej: 1123456789)
+                      </p>
                     </div>
 
                     <div className="sm:col-span-2">
@@ -193,8 +207,8 @@ export function Contact() {
                     <Phone className="h-4 w-4 sm:h-6 sm:w-6" />
                   </div>
                   <div>
-                    <h4 className="font-medium dark:text-white text-sm sm:text-base">Teléfono:</h4>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">+54 9 3888 571363</p>
+                    <h4 className="font-medium dark:text-white text-sm sm:text-base">Teléfono/WhatsApp:</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">+54 9 3888 571363 (Administración)</p>
                   </div>
                 </div>
 
@@ -205,7 +219,7 @@ export function Contact() {
                   <div>
                     <h4 className="font-medium dark:text-white text-sm sm:text-base">Correo electrónico:</h4>
                     <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
-                      info@transporteriolavayen.com
+                      tteriolavayensanpedro@gmail.com (Administración)
                     </p>
                   </div>
                 </div>
@@ -274,7 +288,9 @@ export function Contact() {
                               ¡NUEVA!
                             </span>
                           </div>
-                          <p className="text-gray-600 dark:text-gray-300 text-sm">PROLONGACIÓN ENTRE RÍOS - Bº SANTA CLARA</p>
+                          <p className="text-gray-600 dark:text-gray-300 text-sm">
+                            PROLONGACIÓN ENTRE RÍOS - Bº SANTA CLARA
+                          </p>
                         </div>
                       </li>
                     </div>
