@@ -21,14 +21,17 @@ export async function submitContactForm(formData: FormData) {
 
     const supabase = getSupabaseServerClient()
 
-    // Extraer datos del formulario
+    // Extraer y limpiar datos del formulario
+    const rawPhone = formData.get("phone") as string
+    const cleanPhone = rawPhone ? rawPhone.replace(/\D/g, "") : ""
+
     const contactData: ContactoData = {
-      nombre: formData.get("name") as string,
-      email: formData.get("email") as string,
-      telefono: formData.get("phone") as string,
-      empresa: (formData.get("company") as string) || undefined,
-      mensaje: formData.get("message") as string,
-      tipo_consulta: (formData.get("subject") as string) || "general",
+      nombre: (formData.get("name") as string)?.trim(),
+      email: (formData.get("email") as string)?.trim(),
+      telefono: cleanPhone ? `+549${cleanPhone}` : undefined,
+      empresa: (formData.get("company") as string)?.trim() || undefined,
+      mensaje: (formData.get("message") as string)?.trim(),
+      tipo_consulta: (formData.get("subject") as string)?.trim() || "general",
     }
 
     console.log("📝 Datos del formulario:", contactData)
@@ -38,6 +41,15 @@ export async function submitContactForm(formData: FormData) {
       return {
         success: false,
         message: "Por favor, completa todos los campos requeridos.",
+      }
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(contactData.email)) {
+      return {
+        success: false,
+        message: "Por favor, ingresa un email válido.",
       }
     }
 
@@ -87,15 +99,19 @@ export async function submitConvenioForm(formData: FormData) {
       console.error("Error al parsear servicios:", e)
     }
 
+    // Limpiar y procesar teléfono
+    const rawPhone = formData.get("phone") as string
+    const cleanPhone = rawPhone ? rawPhone.replace(/\D/g, "") : ""
+
     const convenioData: SolicitudConvenioData = {
-      nombre_empresa: formData.get("companyName") as string,
-      contacto_nombre: formData.get("contactName") as string,
-      contacto_email: formData.get("email") as string,
-      contacto_telefono: formData.get("phone") as string,
-      tipo_empresa: formData.get("businessType") as string,
-      volumen_mensual: formData.get("monthlyVolume") as string,
+      nombre_empresa: (formData.get("companyName") as string)?.trim(),
+      contacto_nombre: (formData.get("contactName") as string)?.trim(),
+      contacto_email: (formData.get("email") as string)?.trim(),
+      contacto_telefono: cleanPhone ? `+549${cleanPhone}` : undefined,
+      tipo_empresa: (formData.get("businessType") as string)?.trim(),
+      volumen_mensual: (formData.get("monthlyVolume") as string)?.trim(),
       servicios_interes: serviciosInteres,
-      mensaje: formData.get("message") as string,
+      mensaje: (formData.get("message") as string)?.trim(),
       estado: "pendiente",
     }
 
@@ -158,29 +174,64 @@ export async function submitChatSupport(formData: FormData) {
     const supabase = getSupabaseServerClient()
     const sessionId = generateSessionId()
 
+    // Extraer y limpiar datos
+    const firstName = (formData.get("firstName") as string)?.trim()
+    const lastName = (formData.get("lastName") as string)?.trim()
+    const email = (formData.get("email") as string)?.trim()
+    const company = (formData.get("company") as string)?.trim()
+    const position = (formData.get("position") as string)?.trim()
+    const rawWhatsapp = formData.get("whatsapp") as string
+    const cleanWhatsapp = rawWhatsapp ? rawWhatsapp.replace(/\D/g, "") : ""
+    const message = (formData.get("message") as string)?.trim()
+
+    // Validar campos requeridos
+    if (!firstName || !lastName || !email || !cleanWhatsapp || !message) {
+      return {
+        success: false,
+        message: "Por favor complete todos los campos requeridos.",
+      }
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return {
+        success: false,
+        message: "Por favor ingrese un email válido.",
+      }
+    }
+
+    // Validar WhatsApp (debe tener al menos 10 dígitos)
+    if (cleanWhatsapp.length < 10) {
+      return {
+        success: false,
+        message: "Por favor ingrese un número de WhatsApp válido de al menos 10 dígitos.",
+      }
+    }
+
     // Crear mensaje del chat con todos los datos del formulario
-    const mensaje = `
+    const mensajeCompleto = `
 Nuevo mensaje de soporte:
-- Nombre: ${formData.get("firstName")} ${formData.get("lastName")}
-- Email: ${formData.get("email")}
-- Empresa: ${formData.get("company") || "No especificada"}
-- Cargo: ${formData.get("position") || "No especificado"}
-- WhatsApp: ${formData.get("whatsapp")}
-- Mensaje: ${formData.get("message")}
+- Nombre: ${firstName} ${lastName}
+- Email: ${email}
+- Empresa: ${company || "No especificada"}
+- Cargo: ${position || "No especificado"}
+- WhatsApp: +549${cleanWhatsapp}
+- Mensaje: ${message}
     `.trim()
 
     const chatData: ChatSoporteData = {
       session_id: sessionId,
-      mensaje: mensaje,
+      mensaje: mensajeCompleto,
       tipo: "soporte_tecnico",
       metadata: {
-        nombre: formData.get("firstName"),
-        apellido: formData.get("lastName"),
-        email: formData.get("email"),
-        empresa: formData.get("company"),
-        cargo: formData.get("position"),
-        whatsapp: formData.get("whatsapp"),
-        mensaje_original: formData.get("message"),
+        nombre: firstName,
+        apellido: lastName,
+        email: email,
+        empresa: company,
+        cargo: position,
+        whatsapp: `+549${cleanWhatsapp}`,
+        mensaje_original: message,
       },
     }
 
@@ -336,6 +387,8 @@ export async function registrarFeedbackCalculadora(feedbackData: {
   tipo: "happy" | "neutral" | "sad"
   cotizacion_id?: string
   pagina_origen?: string
+  comentario?: string
+  email?: string
 }) {
   try {
     const supabase = getSupabaseServerClient()
@@ -349,6 +402,8 @@ export async function registrarFeedbackCalculadora(feedbackData: {
     const data: FeedbackClienteData = {
       tipo_feedback: "calculadora_feedback",
       calificacion: calificacionMap[feedbackData.tipo],
+      comentario: feedbackData.comentario,
+      email_cliente: feedbackData.email,
       pagina_origen: feedbackData.pagina_origen || "calculadora",
       metadata: {
         cotizacion_id: feedbackData.cotizacion_id,

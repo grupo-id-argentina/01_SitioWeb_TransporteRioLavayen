@@ -14,6 +14,35 @@ export function Contact() {
     setError("")
 
     try {
+      // Validar campos antes de enviar
+      const name = formData.get("name") as string
+      const email = formData.get("email") as string
+      const phone = formData.get("phone") as string
+      const subject = formData.get("subject") as string
+      const message = formData.get("message") as string
+
+      if (!name?.trim() || !email?.trim() || !phone?.trim() || !subject?.trim() || !message?.trim()) {
+        setError("Por favor, completa todos los campos requeridos.")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Validar email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email.trim())) {
+        setError("Por favor, ingresa un email válido.")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Validar teléfono (debe tener al menos 10 dígitos)
+      const cleanPhone = phone.replace(/\D/g, "")
+      if (cleanPhone.length < 10) {
+        setError("Por favor, ingresa un número de teléfono válido de al menos 10 dígitos.")
+        setIsSubmitting(false)
+        return
+      }
+
       const result = await submitContactForm(formData)
 
       if (result.success) {
@@ -33,7 +62,7 @@ export function Contact() {
     <section className="py-12 sm:py-16 bg-gray-50 dark:bg-secondary-900 transition-colors duration-300" id="contacto">
       <div className="container mx-auto px-4">
         <div className="text-center mb-8 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-4 dark:text-white">Realiza tu consulta ¡Ahora mismo!</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4 dark:text-white">Contáctenos</h2>
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto text-sm sm:text-base">
             Estamos listos para atender sus consultas y resolver cualquier duda sobre nuestros servicios de transporte y
             logística.
@@ -44,7 +73,7 @@ export function Contact() {
           <div className="w-full xl:w-1/2">
             <div className="bg-white dark:bg-secondary-800 rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 p-6 sm:p-8">
               <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 dark:text-white" id="contacto-form">
-                Formulario de Consulta
+                Formulario de Contacto
               </h3>
 
               {submitted ? (
@@ -105,6 +134,8 @@ export function Contact() {
                           name="phone"
                           placeholder="1123456789"
                           maxLength={10}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-secondary-700 dark:text-white transition-all duration-200 text-sm sm:text-base"
                           onChange={(e) => {
                             const value = e.target.value.replace(/\D/g, "").slice(0, 10)
@@ -207,8 +238,8 @@ export function Contact() {
                     <Phone className="h-4 w-4 sm:h-6 sm:w-6" />
                   </div>
                   <div>
-                    <h4 className="font-medium dark:text-white text-sm sm:text-base">Teléfono/WhatsApp:</h4>
-                    <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">+54 9 3888 571363 (Administración)</p>
+                    <h4 className="font-medium dark:text-white text-sm sm:text-base">Teléfono:</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">+54 9 3888 571363</p>
                   </div>
                 </div>
 
@@ -219,7 +250,7 @@ export function Contact() {
                   <div>
                     <h4 className="font-medium dark:text-white text-sm sm:text-base">Correo electrónico:</h4>
                     <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
-                      tteriolavayensanpedro@gmail.com (Administración)
+                      info@transporteriolavayen.com
                     </p>
                   </div>
                 </div>

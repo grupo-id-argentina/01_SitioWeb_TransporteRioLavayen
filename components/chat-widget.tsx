@@ -33,23 +33,43 @@ export function ChatWidget() {
 
     try {
       // Validar campos requeridos
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.whatsapp || !formData.message) {
+      if (
+        !formData.firstName?.trim() ||
+        !formData.lastName?.trim() ||
+        !formData.email?.trim() ||
+        !formData.whatsapp?.trim() ||
+        !formData.message?.trim()
+      ) {
         setError("Por favor complete todos los campos requeridos.")
         setIsSubmitting(false)
         return
       }
 
-      if (!formData.whatsapp.trim() || formData.whatsapp.length !== 10) {
-        setError("Por favor ingrese un número de WhatsApp válido de 10 dígitos.")
+      // Validar email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(formData.email.trim())) {
+        setError("Por favor ingrese un email válido.")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Validar WhatsApp (debe tener al menos 10 dígitos)
+      const cleanWhatsapp = formData.whatsapp.replace(/\D/g, "")
+      if (cleanWhatsapp.length < 10) {
+        setError("Por favor ingrese un número de WhatsApp válido de al menos 10 dígitos.")
         setIsSubmitting(false)
         return
       }
 
       // Crear FormData para enviar al servidor
       const formDataToSend = new FormData()
-      Object.entries(formData).forEach(([key, value]) => {
-        formDataToSend.append(key, value)
-      })
+      formDataToSend.append("firstName", formData.firstName.trim())
+      formDataToSend.append("lastName", formData.lastName.trim())
+      formDataToSend.append("email", formData.email.trim())
+      formDataToSend.append("company", formData.company.trim())
+      formDataToSend.append("position", formData.position.trim())
+      formDataToSend.append("whatsapp", cleanWhatsapp)
+      formDataToSend.append("message", formData.message.trim())
 
       // Enviar datos al servidor
       const result = await submitChatSupport(formDataToSend)
@@ -206,33 +226,21 @@ export function ChatWidget() {
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-secondary-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-secondary-700 dark:text-white"
                     />
 
-                    <div>
-                      <label htmlFor="whatsapp" className="block text-gray-700 dark:text-gray-300 mb-2">
-                        WhatsApp *
-                      </label>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-3 py-2 border border-r-0 border-gray-300 dark:border-secondary-600 bg-gray-50 dark:bg-secondary-600 text-gray-500 dark:text-gray-300 rounded-l-md font-medium">
-                          +549
-                        </span>
-                        <input
-                          type="tel"
-                          id="whatsapp"
-                          name="whatsapp"
-                          value={formData.whatsapp}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, "").slice(0, 10)
-                            setFormData((prev) => ({ ...prev, whatsapp: value }))
-                          }}
-                          placeholder="1123456789"
-                          maxLength={10}
-                          className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-secondary-600 rounded-r-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-secondary-700 dark:text-white"
-                          required
-                        />
-                      </div>
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Ingrese 10 dígitos sin el 0 ni el 15 (ej: 1123456789)
-                      </p>
-                    </div>
+                    <input
+                      type="tel"
+                      name="whatsapp"
+                      value={formData.whatsapp}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "").slice(0, 10)
+                        setFormData((prev) => ({ ...prev, whatsapp: value }))
+                      }}
+                      placeholder="1123456789"
+                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-secondary-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-secondary-700 dark:text-white"
+                      required
+                    />
 
                     <textarea
                       name="message"

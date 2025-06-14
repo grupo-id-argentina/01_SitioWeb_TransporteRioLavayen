@@ -29,11 +29,6 @@ export function PartnershipsPage() {
     setIsSubmitting(true)
     setError("")
 
-    if (!formData.phone.trim() || formData.phone.length !== 10) {
-      setError("Por favor ingrese un número de WhatsApp válido de 10 dígitos.")
-      return
-    }
-
     try {
       // Crear FormData para enviar a la Server Action
       const formDataToSend = new FormData()
@@ -187,26 +182,15 @@ export function PartnershipsPage() {
                   <label htmlFor="phone" className="block text-gray-700 mb-2">
                     Teléfono/WhatsApp *
                   </label>
-                  <div className="flex">
-                    <span className="inline-flex items-center px-3 py-2 border border-r-0 border-gray-300 bg-gray-50 text-gray-500 rounded-l-md font-medium">
-                      +549
-                    </span>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 10)
-                        setFormData((prev) => ({ ...prev, phone: value }))
-                      }}
-                      placeholder="1123456789"
-                      maxLength={10}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                      required
-                    />
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">Ingrese 10 dígitos sin el 0 ni el 15 (ej: 1123456789)</p>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                    required
+                  />
                 </div>
 
                 <div className="mb-4">

@@ -37,13 +37,42 @@ export function ContactPage() {
     setError("")
 
     try {
+      // Validar campos antes de enviar
+      if (
+        !formData.name?.trim() ||
+        !formData.email?.trim() ||
+        !formData.phone?.trim() ||
+        !formData.subject?.trim() ||
+        !formData.message?.trim()
+      ) {
+        setError("Por favor, completa todos los campos requeridos.")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Validar email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(formData.email.trim())) {
+        setError("Por favor, ingresa un email válido.")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Validar teléfono
+      const cleanPhone = formData.phone.replace(/\D/g, "")
+      if (cleanPhone.length < 10) {
+        setError("Por favor, ingresa un número de teléfono válido de al menos 10 dígitos.")
+        setIsSubmitting(false)
+        return
+      }
+
       const formDataToSend = new FormData()
-      formDataToSend.append("name", formData.name)
-      formDataToSend.append("email", formData.email)
-      formDataToSend.append("phone", formData.phone)
-      formDataToSend.append("subject", formData.subject)
-      formDataToSend.append("message", formData.message)
-      formDataToSend.append("company", formData.company)
+      formDataToSend.append("name", formData.name.trim())
+      formDataToSend.append("email", formData.email.trim())
+      formDataToSend.append("phone", cleanPhone)
+      formDataToSend.append("subject", formData.subject.trim())
+      formDataToSend.append("message", formData.message.trim())
+      formDataToSend.append("company", formData.company.trim())
 
       const result = await submitContactForm(formDataToSend)
 
@@ -171,6 +200,8 @@ export function ContactPage() {
                         }}
                         placeholder="1123456789"
                         maxLength={10}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-secondary-700 dark:text-white transition-all duration-200"
                         required
                       />
@@ -207,12 +238,12 @@ export function ContactPage() {
                       required
                     >
                       <option value="">Seleccione un asunto</option>
-                      <option value="cotizacion">Transporte de Carga General</option>
-                      <option value="seguimiento">Logistica Integral</option>
-                      <option value="reclamo">Almacenamiento y Distribucion</option>
-                      <option value="informacion">Transporte de Cargas Especiales</option>
-                      <option value="convenio">Mudanzas Personales y Corporativas</option>
-                      <option value="otro">Servicios de Cross-Docking</option>
+                      <option value="cotizacion">Solicitar cotización</option>
+                      <option value="seguimiento">Seguimiento de envío</option>
+                      <option value="reclamo">Reclamo</option>
+                      <option value="informacion">Información general</option>
+                      <option value="convenio">Solicitar convenio empresarial</option>
+                      <option value="otro">Otro</option>
                     </select>
                   </div>
 
@@ -528,27 +559,14 @@ function ConvenioForm({ onClose }: { onClose: () => void }) {
           <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Teléfono de contacto
           </label>
-          <div className="flex">
-            <span className="inline-flex items-center px-3 py-2 border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-secondary-600 text-gray-500 dark:text-gray-300 rounded-l-lg font-medium">
-              +549
-            </span>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, "").slice(0, 10)
-                setFormData((prev) => ({ ...prev, phone: value }))
-              }}
-              placeholder="1123456789"
-              maxLength={10}
-              className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-secondary-700 dark:text-white"
-            />
-          </div>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Ingrese 10 dígitos sin el 0 ni el 15 (ej: 1123456789)
-          </p>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-secondary-700 dark:text-white"
+          />
         </div>
       </div>
 
