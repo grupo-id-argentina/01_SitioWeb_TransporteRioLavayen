@@ -250,7 +250,9 @@ export function Contact() {
                   <div>
                     <h4 className="font-medium dark:text-white text-sm sm:text-base">Correo electrónico:</h4>
                     <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
-                      info@transporteriolavayen.com
+                      tteriolavayensanpedro@gmail.com
+
+
                     </p>
                   </div>
                 </div>

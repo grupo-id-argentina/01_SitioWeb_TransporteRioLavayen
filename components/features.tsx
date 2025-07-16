@@ -1,4 +1,5 @@
 import { Truck, Clock, Shield, Map, BarChart, Users } from "lucide-react"
+import { ImageCarousel } from "./image-carousel"
 
 export function Features() {
   const features = [
@@ -34,9 +35,32 @@ export function Features() {
     },
   ]
 
+  // Imágenes para el carrusel de promociones
+  const promoImages = [
+    {
+      src: "/images/promo-1.png",
+      alt: "Promoción 3% OFF adicional - Transporte Río Lavayen",
+      title: "Oferta Especial",
+      description: "3% OFF adicional en todos nuestros servicios",
+    },
+    {
+      src: "/images/promo-2.png",
+      alt: "Nuevos depósitos - Transporte Río Lavayen",
+      title: "Nuevos Depósitos",
+      description: "Ampliamos nuestra cobertura con nuevas ubicaciones",
+    },
+    {
+      src: "/images/promo-3.png",
+      alt: "Nuevas unidades - Transporte Río Lavayen",
+      title: "Flota Renovada",
+      description: "Nuevas unidades para un mejor servicio",
+    },
+  ]
+
   return (
     <section className="py-12 sm:py-16 bg-gray-50 dark:bg-secondary-900 transition-colors duration-300" id="servicios">
       <div className="container mx-auto px-4">
+        {/* Título principal */}
         <div className="text-center mb-8 sm:mb-12 animate-fade-in">
           <h2 className="text-2xl sm:text-3xl font-bold mb-4 dark:text-white">Nuestros Servicios</h2>
           <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto text-sm sm:text-base">
@@ -44,7 +68,8 @@ export function Features() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+        {/* Grid de servicios */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16">
           {features.map((feature, index) => (
             <div
               key={index}
@@ -60,7 +85,30 @@ export function Features() {
           ))}
         </div>
 
-        <div className="mt-8 sm:mt-12 text-center animate-slide-up">
+        {/* Sección "Más de 30 años en el mercado" con carrusel */}
+        <div className="mb-16">
+          <div className="text-center mb-8 animate-fade-in">
+            <h3 className="text-2xl sm:text-3xl font-bold mb-4 dark:text-white">Más de 30 Años en el Mercado</h3>
+            <p className="text-gray-600 dark:text-gray-300 max-w-3xl mx-auto text-sm sm:text-base">
+              Tres décadas de experiencia nos respaldan. Descubre nuestras promociones especiales y la evolución
+              constante de nuestros servicios para brindarte siempre lo mejor en transporte y logística.
+            </p>
+          </div>
+
+          <div className="animate-slide-up" style={{ animationDelay: "300ms" }}>
+            <ImageCarousel
+              images={promoImages}
+              autoPlayInterval={5000}
+              showControls={true}
+              showIndicators={true}
+              className="max-w-4xl mx-auto"
+              cardClassName="bg-gradient-to-br from-primary-50 to-accent-50 dark:from-primary-900/20 dark:to-accent-900/20"
+            />
+          </div>
+        </div>
+
+        {/* Call to action */}
+        <div className="text-center animate-slide-up">
           <p className="text-base sm:text-lg font-medium mb-4 sm:mb-6 dark:text-white">
             Conozca más sobre nuestros servicios y cómo podemos ayudarle a mejorar su logística
           </p>

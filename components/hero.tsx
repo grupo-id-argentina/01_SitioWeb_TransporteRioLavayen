@@ -35,12 +35,13 @@ export function Hero() {
           <div className="w-full lg:w-1/2 animate-slide-up" style={{ animationDelay: "300ms" }}>
             <div className="relative h-48 sm:h-64 md:h-80 lg:h-96 w-full">
               <Image
-                src="/placeholder.svg?height=400&width=600"
-                alt="Servicio de transporte y logística"
+                src="/images/hero-composite.png"
+                alt="Promociones de Transporte Río Lavayen: Precios, Flota y Nuevas Unidades"
                 fill
                 className="object-cover rounded-lg shadow-lg transition-transform duration-300 hover:scale-105"
                 priority
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 50vw"
+                quality={85}
               />
             </div>
           </div>
