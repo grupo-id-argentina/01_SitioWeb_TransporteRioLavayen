@@ -244,18 +244,20 @@ export function Calculator() {
   // Tarifas base reales por tipo de carga y zona
   const obtenerTarifaBase = (tipoCarga: string, zona: string) => {
     const tarifasBase: Record<string, Record<string, number>> = {
-      "BULTO MINIMO (MAXIMO 20 KG)": { "1": 3500, "2": 4200, "3": 5000, "4": 5800, "5": 6500 },
-      "DE 21 KG A 100 KG": { "1": 4800, "2": 5600, "3": 6400, "4": 7200, "5": 8000 },
-      "DE 101 KG A 300 KG": { "1": 6200, "2": 7200, "3": 8200, "4": 9200, "5": 10200 },
-      "DE 301 KG A 500 KG": { "1": 7800, "2": 8900, "3": 10000, "4": 11100, "5": 12200 },
-      "DE 501 KG A 1000 KG": { "1": 9500, "2": 10800, "3": 12100, "4": 13400, "5": 14700 },
-      "DE 1001 KG A 1500 KG": { "1": 11200, "2": 12700, "3": 14200, "4": 15700, "5": 17200 },
-      "DE 1501 KG A 2000 KG": { "1": 12900, "2": 14600, "3": 16300, "4": 18000, "5": 19700 },
-      "DE 2001 KG A 2500 KG": { "1": 14600, "2": 16500, "3": 18400, "4": 20300, "5": 22200 },
-      "DE 2501 KG A 3000 KG": { "1": 16300, "2": 18400, "3": 20500, "4": 22600, "5": 24700 },
-      "DE 3001 KG EN ADELANTE": { "1": 18000, "2": 20300, "3": 22600, "4": 24900, "5": 27200 },
-      "METROS CUBICOS": { "1": 8500, "2": 9600, "3": 10700, "4": 11800, "5": 12900 },
-      "METROS CUBICOS MUDANZA": { "1": 10200, "2": 11500, "3": 12800, "4": 14100, "5": 15400 },
+      "BULTO DE 1 KILO A 10 KILOS": { "1": 13308.75, "2": 15970.5, "3": 18632.25, "4": 21294 },
+      "BULTO DE 11 KILO A 20 KILOS": { "1": 26617.5, "2": 31941, "3": 37264.5, "4": 42588 },
+      "DE 21 KILOS A 100 KILOS": { "1": 395.816, "2": 562.884, "3": 638.183, "4": 1037.378 },
+      "DE 101 KILOS A 300 KILOS": { "1": 197.254, "2": 281.463, "3": 319.091, "4": 775.57 },
+      "DE 301 KILOS A 500 KILOS": { "1": 150.993, "2": 215.182, "3": 238.954, "4": 521.287 },
+      "DE 501 KILOS A 1000 KILOS": { "1": 145.164, "2": 206.924, "3": 228.651, "4": 371.747 },
+      "DE 1001 KILOS A 1500 KILOS": { "1": 139.397, "2": 198.618, "3": 220.034, "4": 357.62 },
+      "DE 1501 KILOS A 2000 KILOS": { "1": 99.916, "2": 156.886, "3": 166.024, "4": 311.152 },
+      "DE 2001 KILOS A 2500 KILOS": { "1": 95.817, "2": 137.603, "3": 159.672, "4": 278.102 },
+      "DE 2501 KILOS A 3000 KILOS": { "1": 93.189, "2": 133.046, "3": 154.237, "4": 259.104 },
+      "DE 3001 KILOS EN ADELANTE": { "1": 90.572, "2": 130.409, "3": 144.168, "4": 234.654 },
+      "METROS CUBICOS": { "1": 38697.296, "2": 48126.036, "3": 54994.396, "4": 90544.24 },
+      "METROS CUBICOS MUDANZA": { "1": 51873.957, "2": 63246.409, "3": 82080.874, "4": 149148.445 },
+      "EQUIPO COMPLETO": { "1": 0, "2": 0, "3": 0, "4": 0 },
     }
 
     return tarifasBase[tipoCarga]?.[zona] || 0
@@ -604,7 +606,7 @@ export function Calculator() {
 📍 Destino: ${localidadSeleccionada} (Zona ${zonaSeleccionada})
 📏 Distancia: ${distancia} km
 ⚖️ Cantidad: ${cantidad}
-💰 Costo total: $${costoFinal?.toLocaleString()}
+💰 Costo total: ${costoFinal !== null ? new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(costoFinal) : "N/A"}
 ${incluirIVA ? "✅ IVA incluido" : "❌ Sin IVA"}
 ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleString()})` : "❌ Sin seguro"}
 
@@ -729,7 +731,7 @@ ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleStri
 📍 Destino: ${localidadSeleccionada} (Zona ${zonaSeleccionada})
 📏 Distancia: ${distancia} km
 ⚖️ Cantidad: ${cantidad}
-💰 Costo total: $${costoFinal?.toLocaleString()}
+💰 Costo total: ${costoFinal !== null ? new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(costoFinal) : "N/A"}
 ${incluirIVA ? "✅ IVA incluido" : "❌ Sin IVA"}
 ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleString()})` : "❌ Sin seguro"}
 
@@ -1215,7 +1217,9 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
                     <tr className="border-t border-gray-200 dark:border-secondary-600">
                       <td className="py-3 font-bold text-lg dark:text-white">Costo Total Aproximado:</td>
                       <td className="py-3 font-bold text-lg text-primary-600 dark:text-primary-400">
-                        ARS ${costoFinal?.toLocaleString()}
+                        {costoFinal !== null
+                          ? new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(costoFinal)
+                          : "N/A"}
                       </td>
                     </tr>
                   </tbody>
