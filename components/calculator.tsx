@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Truck, CalculatorIcon as CalcIcon, Send, SmilePlus, Meh, Frown, User, Building, Check } from "lucide-react"
+import { Truck, CableIcon as CalcIcon, Send, SmilePlus, Meh, Frown, User, Building, Check } from "lucide-react"
 import { trackEvent } from "@/lib/mixpanel-config"
 import { saveCotizacion, registrarFeedbackCalculadora, saveWhatsAppContact } from "@/app/actions/contact-actions"
 
@@ -418,7 +418,7 @@ export function Calculator() {
         tipo_envio: "estandar",
         precio_estimado: costo,
         tiempo_estimado: "2-5",
-        estado: "pendiente",
+        estado: "enviado",
       }
 
       // Simular tiempo de cálculo para mejor UX
@@ -449,6 +449,11 @@ export function Calculator() {
             valor_mercaderia: valorMercaderia,
           })
         }
+
+        // NUEVO: Abrir directamente el modal de WhatsApp después de 1 segundo
+        setTimeout(() => {
+          iniciarEnvioWhatsAppDirecto()
+        }, 1000)
       }, 800)
     } catch (err) {
       console.error(err)
@@ -466,6 +471,45 @@ export function Calculator() {
         })
       }
     }
+  }
+
+  // Función para iniciar el envío directo a administración
+  const iniciarEnvioWhatsAppDirecto = () => {
+    setMostrarModalWhatsApp(true)
+    setPasoActual(1)
+    setDestinatarioSeleccionado("administracion")
+    setErrorModal("")
+    setFeedbackSeleccionado(null)
+    setRedireccionando(false)
+    setContadorRedireccion(3)
+
+    // Track WhatsApp flow start (direct)
+    if (isTrackingReady) {
+      trackEvent("WhatsApp Flow Started", {
+        cotizacion_id: cotizacionId,
+        costo_final: costoFinal,
+        deposito: depositoSeleccionado,
+        zona: zonaSeleccionada,
+        localidad: localidadSeleccionada,
+        flow_type: "direct_to_admin",
+      })
+    }
+
+    // Enviar directamente a administración y pasar al paso de feedback
+    setTimeout(() => {
+      enviarPorWhatsAppAdministracion()
+      setPasoActual(3)
+
+      if (isTrackingReady) {
+        trackEvent("WhatsApp Flow Step Changed", {
+          cotizacion_id: cotizacionId,
+          from_step: 1,
+          to_step: 3,
+          recipient_type: "administracion",
+          flow_type: "direct",
+        })
+      }
+    }, 500)
   }
 
   // Función para resetear el formulario
@@ -599,18 +643,25 @@ export function Calculator() {
     const numeroAdministracion = "+5493888446213"
 
     const mensaje = encodeURIComponent(
-      `Hola! Solicito información sobre la cotización ${cotizacionId}:
+      `🚚 *SOLICITUD DE COTIZACIÓN* 🚚
+ID: ${cotizacionId}
 
-📦 Tipo de carga: ${tipoCargaSeleccionado}
-📍 Origen: ${depositoSeleccionado}
-📍 Destino: ${localidadSeleccionada} (Zona ${zonaSeleccionada})
-📏 Distancia: ${distancia} km
-⚖️ Cantidad: ${cantidad}
-💰 Costo total: ${costoFinal !== null ? new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(costoFinal) : "N/A"}
-${incluirIVA ? "✅ IVA incluido" : "❌ Sin IVA"}
-${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleString()})` : "❌ Sin seguro"}
+📦 *DETALLES DEL ENVÍO:*
+• Tipo de carga: ${tipoCargaSeleccionado}
+• Cantidad: ${cantidad}
+• Origen: ${depositoSeleccionado}
+• Destino: ${localidadSeleccionada} (Zona ${zonaSeleccionada})
+• Distancia aproximada: ${distancia} km
 
-¿Podrían confirmar disponibilidad y tiempos de entrega?`,
+💰 *OPCIONES ADICIONALES:*
+${incluirIVA ? "✅ Cliente solicita IVA incluido (21%)" : "❌ Cliente NO solicita IVA"}
+${deseaSeguro ? `🛡️ Cliente solicita seguro - Valor declarado: $${valorMercaderia.toLocaleString()}` : "❌ Cliente NO solicita seguro"}
+
+⏰ *Cotización válida por 48 horas*
+
+*Por favor, proporcionar precio exacto y confirmar disponibilidad y tiempos de entrega.*
+
+_Generado desde calculadora web - ${new Date().toLocaleString()}_`,
     )
 
     // Track WhatsApp message sent to administration
@@ -629,6 +680,7 @@ ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleStri
         desea_seguro: deseaSeguro,
         valor_mercaderia: valorMercaderia,
         distancia: distancia,
+        flow_type: "direct",
       })
     }
 
@@ -645,7 +697,7 @@ ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleStri
       if (isTrackingReady) {
         trackEvent("WhatsApp Form Validation Error", {
           cotizacion_id: cotizacionId,
-          error_field: "nombre",
+          field: "nombre",
           error_message: "Nombre requerido",
           paso: 2,
         })
@@ -660,7 +712,7 @@ ${deseaSeguro ? `🛡️ Seguro incluido (Valor: $${valorMercaderia.toLocaleStri
       if (isTrackingReady) {
         trackEvent("WhatsApp Form Validation Error", {
           cotizacion_id: cotizacionId,
-          error_field: "whatsapp",
+          field: "whatsapp",
           error_message: "WhatsApp inválido - debe tener al menos 10 dígitos",
           whatsapp_length: cleanWhatsapp.length,
           paso: 2,
@@ -1165,7 +1217,17 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="grid md:grid-cols-2 gap-6 mb-6 relative">
+              {/* Overlay de desenfoque cuando se muestra el modal */}
+              {mostrarModalWhatsApp && (
+                <div className="absolute inset-0 bg-white/70 dark:bg-secondary-800/70 backdrop-blur-sm rounded-lg z-10 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-600 border-t-transparent mx-auto mb-2" />
+                    <p className="text-gray-600 dark:text-gray-300 font-medium">Enviando cotización...</p>
+                  </div>
+                </div>
+              )}
+
               <div className="animate-slide-up">
                 <h3 className="text-lg font-semibold mb-3 dark:text-white">Detalles del Envío</h3>
                 <table className="w-full text-sm">
@@ -1215,11 +1277,14 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
                       </tr>
                     )}
                     <tr className="border-t border-gray-200 dark:border-secondary-600">
-                      <td className="py-3 font-bold text-lg dark:text-white">Costo Total Aproximado:</td>
-                      <td className="py-3 font-bold text-lg text-primary-600 dark:text-primary-400">
-                        {costoFinal !== null
-                          ? new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(costoFinal)
-                          : "N/A"}
+                      <td className="py-3 font-bold text-lg dark:text-white">Estado:</td>
+                      <td className="py-3 font-bold text-lg text-orange-600 dark:text-orange-400">
+                        Enviado a Administración
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2} className="py-2 text-sm text-gray-500 dark:text-gray-400 italic">
+                        El precio exacto será proporcionado por Administración vía WhatsApp
                       </td>
                     </tr>
                   </tbody>
@@ -1233,10 +1298,10 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
             >
               <button
                 onClick={iniciarEnvioWhatsApp}
-                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-3 px-6 rounded-md flex items-center justify-center transition-all duration-200 transform hover:scale-105"
+                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-3 px-6 rounded-md flex items-center justify-center transition-all duration-200 transform hover:scale-105"
               >
                 <Send className="mr-2 h-5 w-5" />
-                <span>Enviar por WhatsApp</span>
+                <span>Reenviar o Enviar a Otro</span>
               </button>
 
               <button
@@ -1276,8 +1341,8 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
               </div>
             </div>
 
-            {/* Paso 1: Elegir destinatario */}
-            {pasoActual === 1 && (
+            {/* Paso 1: Solo mostrar si no es flujo directo */}
+            {pasoActual === 1 && destinatarioSeleccionado !== "administracion" && (
               <div className="animate-fade-in">
                 <h3 className="text-xl font-bold mb-4 dark:text-white text-center">
                   ¿A quién deseas enviar la cotización?
@@ -1308,6 +1373,19 @@ Para más información, contacta a TRANSPORTE RIO LAVAYEN al +5493888446213`,
                   >
                     Cancelar
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Nuevo: Paso 1 para flujo directo */}
+            {pasoActual === 1 && destinatarioSeleccionado === "administracion" && (
+              <div className="animate-fade-in text-center">
+                <h3 className="text-xl font-bold mb-4 dark:text-white">Enviando cotización...</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  Tu cotización está siendo enviada a Administración de Transporte Río Lavayen
+                </p>
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-600 border-t-transparent" />
                 </div>
               </div>
             )}
